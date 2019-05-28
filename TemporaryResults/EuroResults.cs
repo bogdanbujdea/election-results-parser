@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -19,6 +18,7 @@ namespace TemporaryResults
 {
     public static class EuroResults
     {
+
         [FunctionName("euro")]
         public static async Task<HttpResponseMessage> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
@@ -28,12 +28,37 @@ namespace TemporaryResults
             var html = new StringBuilder();
             html.Append("<html><body>");
 
-            await GetHtmlResults(html, "tara", 8954959, "results");
-            await GetHtmlResults(html, "diaspora", 369775, "diaspora");
+            var type = req.Query["type"];
+            var localFileName = "results";
+            var diasporaFileName = "diaspora";
+            if (string.IsNullOrWhiteSpace(type) == false && type == "partiale")
+            {
+                localFileName = "partialero";
+                diasporaFileName = "partialediaspora";
+                html.Append("<h1>Rezultate partiale</h1></br> <a target=\"blank\" href=\"?code=0ubeBbfmos0UYZcbWmvzajhu5QSdM8Wx/O311I/E0VFgmQa9hZ1zlw==&type=\">Puteti vedea rezultatele provizorii aici</a>");
+                html.Append($"<br/><br/>DISCLAIMER: Pot fi diferente intre rezultatele de aici si cele oficiale. Am scos voturile anulate, dar procentajul nu pare sa fie corect la procentajul de voturi numarate.<br/>");
+            }
+            else
+            {
+                html.Append("<h1>Rezultate provizorii</h1></br> <a target=\"blank\" href=\"?code=0ubeBbfmos0UYZcbWmvzajhu5QSdM8Wx/O311I/E0VFgmQa9hZ1zlw==&type=partiale\">Puteti vedea rezultatele partiale aici</a>");
+                html.Append($"<br/><br/>DISCLAIMER: Pot fi diferente intre rezultatele de aici si cele oficiale. Am scos voturile anulate, dar procentajul nu pare sa fie corect la procentajul de voturi numarate.<br/>");
+            }
 
-            html.Append(
-                "Sursa: Voturi provizorii de pe <a  target=\"blank\" href=\"https://prezenta.bec.ro/europarlamentare26052019/romania-pv-temp\">https://prezenta.bec.ro/europarlamentare26052019/romania-pv-temp</a>");
-            html.Append("<br/><br/>Bogdan Bujdea - <a target=\"blank\" href=\"https:/twitter.com/thewindev\">@thewindev</a>");
+            (Dictionary<string, int> candidates, int cancelledVotes) localResults = await GetHtmlResults(html, "tara", 8954959, localFileName);
+            var localVotes = localResults.candidates;
+            var diasporaResults = await GetHtmlResults(html, "diaspora", 375219, diasporaFileName);
+            var diaspora = diasporaResults.candidates;
+            var totalCancelledVotes = localResults.cancelledVotes + diasporaResults.cancelledVotes;
+            foreach (var vote in localVotes)
+            {
+                diaspora[vote.Key] += vote.Value;
+            }
+            AddResultsFromVotes(html, "Romania + diaspora", (8954959 + 375219), diaspora, totalCancelledVotes);
+
+            html.Append($"<br/>");
+            html.Append("Sursa: Voturi provizorii de pe <a  target=\"blank\" href=\"https://prezenta.bec.ro/europarlamentare26052019/romania-pv-temp\">https://prezenta.bec.ro/europarlamentare26052019/romania-pv-temp</a>");
+            html.Append("<br/><br/>Bogdan Bujdea - <a target=\"blank\" href=\"https://twitter.com/thewindev\">@thewindev</a>");
+            html.Append("<br/><br/> <a target=\"blank\" href=\"https://code4.ro/ro\">Code for Romania</a>");
             html.Append("</body></html>");
             var response = new HttpResponseMessage(HttpStatusCode.OK);
             var stream = new MemoryStream(Encoding.UTF8.GetBytes(html.ToString()));
@@ -42,53 +67,79 @@ namespace TemporaryResults
             return response;
         }
 
-        private static async Task<StringBuilder> GetHtmlResults(StringBuilder html, string name, decimal voteCount, string fileName)
+        private static async Task<(Dictionary<string, int> candidates, int cancelledVotes)> GetHtmlResults(StringBuilder html, string name, decimal voteCount, string fileName)
         {
-            //var csv = File.ReadAllText($"d:\\{fileName}.csv");
+            //var csv = File.ReadAllText($"d:\\partialero.csv");
             var csv = await new HttpClient().GetStringAsync($"https://diettrackerstorage.blob.core.windows.net/results/{fileName}.csv");
-            var dictionary = await RetrieveResults(csv);
+            var (candidates, cancelledVotes) = await RetrieveResults(csv);
+            AddResultsFromVotes(html, name, voteCount, candidates, cancelledVotes);
+            return (candidates, cancelledVotes);
+        }
+
+        private static void AddResultsFromVotes(StringBuilder html, string name, decimal voteCount, Dictionary<string, int> dictionary, int cancelledVotes)
+        {
             var sum = dictionary.Sum(c => c.Value);
             var index = 1;
             html.Append($"<br/>");
             html.Append($"<h2>Voturi {name}</h2><br />");
             html.Append($"Total voturi {name}: {voteCount}<br />");
-            decimal countedPercentage = Math.Round(sum / (decimal)voteCount * 100, 2);
-            html.Append($"Voturi numarate {name}: {sum} - {Math.Round(countedPercentage, 2)}%<br /><br />");
+            html.Append($"Total voturi anulate in {name}: {cancelledVotes}<br />");
+            voteCount -= cancelledVotes;
+            var countedPercentage = Math.Round(sum / (decimal)voteCount * 100, 2);
+            html.Append($"Voturi numarate {name}: {sum} - <b>{Math.Round(countedPercentage, 2)}% </b><br /><br />");
             html.Append($"<br/>");
+            html.Append($"<table >");
+            html.Append($"<tr>");
+            html.Append($"<th>Pozitie</th>");
+            html.Append($"<th>Nume</th>");
+            html.Append($"<th>Procent</th>");
+            html.Append($"<th>Voturi</th>");
+            html.Append($"<th>Distanta fata de cel anterior</th>");
+            html.Append($"</tr>");
+            KeyValuePair<string, int> lastKvp = new KeyValuePair<string, int>();
             foreach (var kvp in dictionary.OrderByDescending(d => d.Value))
             {
-                decimal percentage = Math.Round((decimal) kvp.Value / (decimal) sum * 100, 2);
-                html.Append($"{index++}. {kvp.Key} - {kvp.Value} - {percentage}%");
-                html.Append($"<br/>");
-            }
+                decimal percentage = Math.Round((decimal)kvp.Value / (decimal)sum * 100, 2);
+                html.Append($"<tr>");
+                html.Append($"<td>{index++}</td><td>{kvp.Key}</td><td><b>{percentage}%</b></td><td>{kvp.Value:N1}</td>");
+                if (lastKvp.Value != 0)
+                {
+                    html.Append(
+                        $"<td><b>{(lastKvp.Value - kvp.Value):N1}</b></td>");
+                }
 
-            return html;
+                lastKvp = kvp;
+                html.Append($"</tr>");
+            }
+            html.Append($"</table >");
+
         }
 
-        private static async Task<Dictionary<string, int>> RetrieveResults(string csv)
+        private static async Task<(Dictionary<string, int> candidates, int cancelledVotes)> RetrieveResults(string csv)
         {
             var csvParser = new CsvParser(new StringReader(csv));
             var headers = (await csvParser.ReadAsync()).ToList();
             var candidates = new Dictionary<string, int>
-    {
-        {"PSD", 0},
-        {"USR-PLUS", 0},
-        {"PRO Romania", 0},
-        {"UDMR", 0},
-        {"PNL", 0},
-        {"ALDE", 0},
-        {"PRO DEMO", 0},
-        {"PMP", 0},
-        {"PSR", 0},
-        {"PSDI", 0},
-        {"PRU", 0},
-        {"UNPR", 0},
-        {"BUN", 0},
-        {"Gregoriana Tudoran", 0},
-        {"George Simion", 0},
-        {"Peter Costea", 0},
-    };
+            {
+                {"PSD", 0},
+                {"USR-PLUS", 0},
+                {"PRO Romania", 0},
+                {"UDMR", 0},
+                {"PNL", 0},
+                {"ALDE", 0},
+                {"PRO DEMO", 0},
+                {"PMP", 0},
+                {"PSR", 0},
+                {"PSDI", 0},
+                {"PRU", 0},
+                {"UNPR", 0},
+                {"BUN", 0},
+                {"Gregoriana Tudoran", 0},
+                {"George Simion", 0},
+                {"Peter Costea", 0}
+            };
             string[] results;
+            var cancelledVotes = 0;
             do
             {
                 results = await csvParser.ReadAsync();
@@ -100,7 +151,7 @@ namespace TemporaryResults
                     var candidate = candidates.ElementAt(i);
                     candidates[candidate.Key] += votes;
                 }
-
+                cancelledVotes += int.Parse(results[headers.IndexOf($"f")]);
             } while (results != null);
 
             for (int i = 0; i < candidates.Count; i++)
@@ -109,7 +160,7 @@ namespace TemporaryResults
                 Debug.WriteLine($"{candidate.Key} has {candidate.Value} votes");
             }
 
-            return candidates;
+            return (candidates, cancelledVotes);
         }
 
     }
