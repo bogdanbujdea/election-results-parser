@@ -16,3 +16,7 @@ After that, I build a basic HTML and return it in the response.
 
 You can check it here: http://bit.ly/rezultateprovizorii
 
+If you wanna help build stuff like this, join [Code 4 Romania](https://tfsg.code4.ro/ro/), we are a group of volunteers who create open source digital tools that upgrade Romania to a better place to live in.
+
+
+And if you don't have time, [donations are always welcomed](https://code4.ro/ro/doneaza/)
