@@ -101,11 +101,11 @@ namespace TemporaryResults
             {
                 decimal percentage = Math.Round((decimal)kvp.Value / (decimal)sum * 100, 2);
                 html.Append($"<tr>");
-                html.Append($"<td>{index++}</td><td>{kvp.Key}</td><td><b>{percentage}%</b></td><td>{kvp.Value:N1}</td>");
+                html.Append($"<td>{index++}</td><td>{kvp.Key}</td><td><b>{percentage}%</b></td><td>{kvp.Value:N0}</td>");
                 if (lastKvp.Value != 0)
                 {
                     html.Append(
-                        $"<td><b>{(lastKvp.Value - kvp.Value):N1}</b></td>");
+                        $"<td><b>{(lastKvp.Value - kvp.Value):N0}</b></td>");
                 }
 
                 lastKvp = kvp;
