@@ -18,13 +18,22 @@ namespace TemporaryResults
         {
             log.LogInformation($"Uploading files");
 
-            await UpdateResults("https://prezenta.bec.ro/europarlamentare26052019/data/pv/csv/pv_RO_EUP_PROV.csv", "results.csv", log);
+            await UpdateResults("https://prezenta.bec.ro/europarlamentare26052019/data/pv/csv/pv_RO_EUP_PROV.csv", "provizoriiro.csv", log);
             log.LogInformation($"Romania results uploaded successfully");
+
             await UpdateResults("https://prezenta.bec.ro/europarlamentare26052019/data/pv/csv/pv_RO_EUP_PART.csv", "partialero.csv", log);
             log.LogInformation($"Romania partial results uploaded successfully");
-            await UpdateResults("https://prezenta.bec.ro/europarlamentare26052019/data/pv/csv/pv_SR_EUP_PROV.csv", "diaspora.csv", log);
+
+            await UpdateResults("https://prezenta.bec.ro/europarlamentare26052019/data/pv/csv/pv_RO_EUP_FINAL.csv", "finalero.csv", log);
+            log.LogInformation($"Romania final results uploaded successfully");
+
+            await UpdateResults("https://prezenta.bec.ro/europarlamentare26052019/data/pv/csv/pv_SR_EUP_PROV.csv", "provizoriidiaspora.csv", log);
             log.LogInformation($"Diaspora results uploaded successfully");
+
             await UpdateResults("https://prezenta.bec.ro/europarlamentare26052019/data/pv/csv/pv_SR_EUP_PART.csv", "partialediaspora.csv", log);
+            log.LogInformation($"Diaspora partial results uploaded successfully");
+
+            await UpdateResults("https://prezenta.bec.ro/europarlamentare26052019/data/pv/csv/pv_SR_EUP_FINAL.csv", "finalediaspora.csv", log);
             log.LogInformation($"Diaspora partial results uploaded successfully");
 
             log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");

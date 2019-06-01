@@ -29,20 +29,15 @@ namespace TemporaryResults
             html.Append("<html><body>");
 
             var type = req.Query["type"];
-            var localFileName = "results";
-            var diasporaFileName = "diaspora";
-            if (string.IsNullOrWhiteSpace(type) == false && type == "partiale")
-            {
-                localFileName = "partialero";
-                diasporaFileName = "partialediaspora";
-                html.Append("<h1>Rezultate partiale</h1></br> <a target=\"blank\" href=\"?code=0ubeBbfmos0UYZcbWmvzajhu5QSdM8Wx/O311I/E0VFgmQa9hZ1zlw==&type=\">Puteti vedea rezultatele provizorii aici</a>");
-                html.Append($"<br/><br/>DISCLAIMER: Pot fi diferente intre rezultatele de aici si cele oficiale. Am scos voturile anulate, dar procentajul nu pare sa fie corect la procentajul de voturi numarate.<br/>");
-            }
-            else
-            {
-                html.Append("<h1>Rezultate provizorii</h1></br> <a target=\"blank\" href=\"?code=0ubeBbfmos0UYZcbWmvzajhu5QSdM8Wx/O311I/E0VFgmQa9hZ1zlw==&type=partiale\">Puteti vedea rezultatele partiale aici</a>");
-                html.Append($"<br/><br/>DISCLAIMER: Pot fi diferente intre rezultatele de aici si cele oficiale. Am scos voturile anulate, dar procentajul nu pare sa fie corect la procentajul de voturi numarate.<br/>");
-            }
+            if (string.IsNullOrWhiteSpace(type))
+                type = "finale";
+            var localFileName = type + "ro";
+            var diasporaFileName = type + "diaspora";
+            html.Append($"<h1>Rezultate {type}</h1></br> " +
+                        "<br/><a target=\"blank\" href=\"?code=0ubeBbfmos0UYZcbWmvzajhu5QSdM8Wx/O311I/E0VFgmQa9hZ1zlw==&type=provizorii\">Puteti vedea rezultatele provizorii aici</a>"+
+                        "<br/><a target=\"blank\" href=\"?code=0ubeBbfmos0UYZcbWmvzajhu5QSdM8Wx/O311I/E0VFgmQa9hZ1zlw==&type=partiale\">Puteti vedea rezultatele partiale aici</a>"+
+                        "<br/><a target=\"blank\" href=\"?code=0ubeBbfmos0UYZcbWmvzajhu5QSdM8Wx/O311I/E0VFgmQa9hZ1zlw==&type=finale\">Puteti vedea rezultatele finale aici</a>");
+            html.Append($"<br/><br/>DISCLAIMER: Pot fi diferente intre rezultatele de aici si cele oficiale. Am scos voturile anulate, dar procentajul nu pare sa fie corect la procentajul de voturi numarate.<br/>");
 
             (Dictionary<string, int> candidates, int cancelledVotes) localResults = await GetHtmlResults(html, "tara", 8954959, localFileName);
             var localVotes = localResults.candidates;
@@ -86,7 +81,7 @@ namespace TemporaryResults
             html.Append($"Total voturi anulate in {name}: {cancelledVotes}<br />");
             voteCount -= cancelledVotes;
             var countedPercentage = Math.Round(sum / (decimal)voteCount * 100, 2);
-            html.Append($"Voturi numarate {name}: {sum} - <b>{Math.Round(countedPercentage, 2)}% </b><br /><br />");
+            html.Append($"Voturi numarate {name}: {sum} - <b>{Math.Round(countedPercentage, 2)}% </b>*sunt sanse ca procentajul voturilor numarate sa fie gresit<br /><br />");
             html.Append($"<br/>");
             html.Append($"<table >");
             html.Append($"<tr>");
